@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>LDCompact</title>
+<style>
+  :root{
+    --bg:#101014; --panel:#16161c; --panel2:#1c1c24; --line:#27272f;
+    --txt:#e9e9ee; --mut:#8b8b97; --dim:#5f5f6b; --logbg:#0a0a0e;
+    --acc:#7c6cff; --acc2:#8b7dff; --grn:#3ecf8e; --red:#ff6b6b; --amb:#f0b429;
+    --logh:232px;
+  }
+  html[data-theme="light"]{
+    --bg:#f2f2f6; --panel:#ffffff; --panel2:#ececf2; --line:#d9d9e3;
+    --txt:#15151c; --mut:#55555f; --dim:#84848f; --logbg:#fafafc;
+    --acc:#5a49e0; --acc2:#6d5cf0; --grn:#0b8557; --red:#cf3b3b; --amb:#a06a00;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--txt);
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    font-size:13px; display:flex; flex-direction:column; overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:"Cascadia Mono",Consolas,monospace;font-variant-numeric:tabular-nums}
+
+  header{
+    display:flex;align-items:center;gap:14px;flex:0 0 auto;position:relative;
+    padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel);
+  }
+  .logo{width:26px;height:26px;border-radius:7px;background:var(--acc);
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff}
+  h1{font-size:14px;font-weight:600;letter-spacing:.2px}
+  .sub{font-size:11px;color:var(--dim);margin-top:1px}
+  .path{flex:1;font-size:11px;color:var(--mut);text-align:right;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl}
+
+  button{
+    font-family:inherit;font-size:12px;font-weight:500;color:var(--txt);
+    background:var(--panel2);border:1px solid var(--line);border-radius:7px;
+    padding:6px 12px;cursor:pointer;transition:.12s;white-space:nowrap;
+  }
+  button:hover:not(:disabled){border-color:var(--mut)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.primary{background:var(--acc);border-color:var(--acc);color:#fff;padding:8px 18px}
+  button.primary:hover:not(:disabled){background:var(--acc2)}
+  button.tiny{padding:3px 9px;font-size:11px;border-radius:6px}
+  button.icon{padding:5px 7px;display:flex;align-items:center;justify-content:center}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
+    padding:12px 18px 8px;flex:0 0 auto}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 14px}
+  .card .k{font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px}
+  .card .v{font-size:20px;font-weight:600;margin-top:2px}
+  .card .v small{font-size:11px;color:var(--mut);font-weight:400;margin-left:2px}
+  .v.grn{color:var(--grn)} .v.acc{color:var(--acc)}
+
+  .wrap{flex:1 1 auto;min-height:120px;overflow:auto;padding:6px 18px 4px}
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font-size:10.5px;font-weight:600;color:var(--mut);
+    text-transform:uppercase;letter-spacing:.6px;padding:6px 10px;
+    border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:2}
+  th.num,td.num{text-align:right}
+  td{padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tbody tr:hover{background:var(--panel2)}
+  tbody tr.sel{background:var(--panel2)}
+
+  input[type=checkbox]{
+    width:15px;height:15px;cursor:pointer;appearance:none;
+    border:1px solid var(--dim);border-radius:4px;background:transparent;
+    position:relative;flex-shrink:0;
+  }
+  input[type=checkbox]:checked{background:var(--acc);border-color:var(--acc)}
+  input[type=checkbox]:checked::after{
+    content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;
+    border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);
+  }
+  input[type=checkbox]:disabled{opacity:.35;cursor:not-allowed}
+
+  .nm{font-weight:500;display:flex;align-items:center;gap:7px}
+  .idx{color:var(--dim);font-size:11px}
+  .files{font-size:10.5px;color:var(--dim);margin-top:2px}
+  .chip{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:20px;
+    border:1px solid var(--line);color:var(--mut)}
+  .chip.on{border-color:var(--amb);color:var(--amb)}
+  .chip.bad{border-color:var(--red);color:var(--red)}
+  .big{font-size:13px}
+  .grn{color:var(--grn)} .mut{color:var(--mut)} .red{color:var(--red)}
+
+  .grip{flex:0 0 7px;cursor:ns-resize;position:relative}
+  .grip::after{content:"";position:absolute;left:50%;top:2px;width:46px;height:3px;
+    margin-left:-23px;border-radius:2px;background:var(--line);transition:.12s}
+  .grip:hover::after{background:var(--acc)}
+
+  .logbar{flex:0 0 auto;display:flex;align-items:center;gap:9px;padding:7px 18px 6px;
+    border-top:1px solid var(--line);background:var(--panel)}
+  .logbar .ttl{font-size:10.5px;font-weight:600;color:var(--mut);
+    text-transform:uppercase;letter-spacing:.7px}
+  .logbar .cnt{font-size:10.5px;color:var(--dim)}
+  .logbar .phase{font-size:11px;color:var(--acc);margin-left:4px}
+  .logbar .sp{flex:1}
+
+  .log{flex:0 0 var(--logh);overflow:auto;background:var(--logbg);
+    border-top:1px solid var(--line);padding:7px 18px 10px;
+    font-family:"Cascadia Mono",Consolas,monospace;font-size:11.5px;line-height:1.62}
+  .log div{white-space:pre-wrap;word-break:break-word}
+  .log .ok{color:var(--grn)} .log .warn{color:var(--amb)}
+  .log .err{color:var(--red)} .log .head{color:var(--acc);font-weight:600}
+  .log .info{color:var(--mut)}
+  .log .sys{color:var(--dim)}
+
+  footer{flex:0 0 auto;border-top:1px solid var(--line);background:var(--panel);
+    padding:9px 18px 11px;display:flex;flex-direction:column;gap:8px}
+  .bar{height:4px;background:var(--line);border-radius:4px;overflow:hidden}
+  .bar>i{display:block;height:100%;width:0;background:var(--acc);border-radius:4px;transition:width .18s}
+  .opts{display:flex;align-items:center;gap:18px;font-size:11.5px;color:var(--mut)}
+  .opt{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none}
+  .opt input{margin:0}
+  .spacer{flex:1}
+
+  .empty{text-align:center;color:var(--dim);padding:50px 0;font-size:12px}
+  .spin{display:inline-block;width:11px;height:11px;border:2px solid var(--line);
+    border-top-color:var(--acc);border-radius:50%;animation:sp .7s linear infinite;
+    vertical-align:-2px;margin-right:6px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  .toast{position:absolute;right:18px;top:56px;background:var(--grn);color:#fff;
+    font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:7px;
+    opacity:0;transition:.2s;pointer-events:none;z-index:60}
+  .toast.show{opacity:1}
+
+  .pop{
+    position:absolute;right:16px;top:52px;width:268px;z-index:50;
+    background:var(--panel);border:1px solid var(--line);border-radius:11px;
+    padding:13px 14px;display:none;box-shadow:0 10px 28px rgba(0,0,0,.28);
+  }
+  .pop.open{display:block}
+  .pop .row{margin-bottom:12px}
+  .pop .row:last-child{margin-bottom:0}
+  .pop .lbl{font-size:10.5px;font-weight:600;color:var(--mut);
+    text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+  .seg{display:flex;background:var(--panel2);border:1px solid var(--line);
+    border-radius:8px;padding:2px;gap:2px}
+  .seg button{flex:1;border:0;background:transparent;padding:5px 6px;border-radius:6px;
+    font-size:11.5px;color:var(--mut)}
+  .seg button.on{background:var(--panel);color:var(--txt);box-shadow:0 0 0 1px var(--line)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">L</div>
+  <div>
+    <h1>LDCompact</h1>
+    <div class="sub" data-i18n="sub"></div>
+  </div>
+  <div class="path" id="path" data-i18n="notscanned"></div>
+  <button id="btnScan" onclick="scan()" data-i18n="rescan"></button>
+  <button class="icon" id="btnSet" onclick="toggleSettings(event)" title="Settings">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  </button>
+
+  <div class="pop" id="pop">
+    <div class="row">
+      <div class="lbl" data-i18n="theme"></div>
+      <div class="seg" id="segTheme">
+        <button data-v="auto" data-i18n="themeauto"></button>
+        <button data-v="light" data-i18n="themelight"></button>
+        <button data-v="dark" data-i18n="themedark"></button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="lbl" data-i18n="language"></div>
+      <div class="seg" id="segLang">
+        <button data-v="en">English</button>
+        <button data-v="vi">Tiếng Việt</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="stats">
+  <div class="card"><div class="k" data-i18n="total"></div><div class="v mono" id="sTot">—<small>GB</small></div></div>
+  <div class="card"><div class="k" data-i18n="reclaim"></div><div class="v mono grn" id="sRec">—<small>GB</small></div></div>
+  <div class="card"><div class="k" data-i18n="after"></div><div class="v mono grn" id="sAft">—<small>GB</small></div></div>
+  <div class="card"><div class="k" data-i18n="free"></div><div class="v mono acc" id="sFree">—<small>GB</small></div></div>
+</div>
+
+<div class="wrap" id="wrap">
+  <table>
+    <thead>
+      <tr>
+        <th style="width:34px"><input type="checkbox" id="all" onclick="toggleAll(this)"></th>
+        <th data-i18n="instance"></th>
+        <th style="width:96px" data-i18n="status"></th>
+        <th class="num" style="width:104px" data-i18n="current"></th>
+        <th class="num" style="width:104px" data-i18n="reclaimcol"></th>
+        <th class="num" style="width:104px" data-i18n="aftercol"></th>
+      </tr>
+    </thead>
+    <tbody id="tb">
+      <tr><td colspan="6"><div class="empty" data-i18n="ready"></div></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="grip" id="grip"></div>
+
+<div class="logbar">
+  <span class="ttl" data-i18n="log"></span>
+  <span class="cnt mono" id="cnt"></span>
+  <span class="phase" id="phase"></span>
+  <span class="sp"></span>
+  <button class="tiny" onclick="copyLog()" data-i18n="copy"></button>
+  <button class="tiny" onclick="clearLog()" data-i18n="clear"></button>
+  <button class="tiny" onclick="toggleLog()" id="btnExp" data-i18n="expand"></button>
+</div>
+<div class="log" id="log"></div>
+
+<footer>
+  <div class="bar" id="bar"><i></i></div>
+  <div class="opts">
+    <label class="opt"><input type="checkbox" id="quitRun"> <span data-i18n="autoclose"></span></label>
+    <label class="opt"><input type="checkbox" id="keepBak"> <span data-i18n="keepbak"></span></label>
+    <div class="spacer"></div>
+    <span id="hint" class="mut" style="font-size:11px"></span>
+    <button class="primary" id="btnGo" onclick="go()" disabled data-i18n="clean"></button>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const I18N = {
+  en: {
+    sub: 'Reclaim space from LDPlayer virtual disks — drops blocks the guest OS already freed',
+    rescan: 'Rescan', notscanned: 'not scanned',
+    total: 'Total disk', reclaim: 'Reclaimable', after: 'After clean', free: 'Drive free',
+    instance: 'Instance', status: 'Status', current: 'Current', reclaimcol: 'Reclaim', aftercol: 'After',
+    running: 'Running', dirty: 'FS not clean', off: 'Off',
+    log: 'Log', lines: '{n} lines', copy: 'Copy log', clear: 'Clear',
+    expand: 'Expand', collapse: 'Collapse',
+    autoclose: 'Auto-close running instances', keepbak: 'Keep original (.orig)',
+    selecthint: 'select instances to clean', clean: 'Clean selected', cleann: 'Clean {n}',
+    scanning: 'Scanning virtual disks...', ready: 'Press Rescan to start',
+    copied: 'Copied {n} lines', copyfail: 'Copy failed', logempty: 'Log is empty',
+    theme: 'Theme', themeauto: 'Auto', themelight: 'Light', themedark: 'Dark', language: 'Language',
+    scanstart: 'Scanning...', scandone: 'Scan finished: {n} instances · {r} GB reclaimable · {f} GB free',
+    scanfail: 'Scan failed: {m}', runfail: 'Could not start: {m}',
+    alldone: 'DONE: {a} GB → {b} GB (saved {c} GB)', stopped: 'STOPPED: {m}'
+  },
+  vi: {
+    sub: 'Thu hồi dung lượng đĩa ảo LDPlayer — bỏ các block hệ điều hành khách đã xoá',
+    rescan: 'Quét lại', notscanned: 'chưa quét',
+    total: 'Tổng đĩa ảo', reclaim: 'Thu hồi được', after: 'Sau khi dọn', free: 'Trống ổ đĩa',
+    instance: 'Máy ảo', status: 'Trạng thái', current: 'Hiện tại', reclaimcol: 'Thu hồi', aftercol: 'Sau dọn',
+    running: 'Đang chạy', dirty: 'FS chưa sạch', off: 'Tắt',
+    log: 'Nhật ký', lines: '{n} dòng', copy: 'Copy log', clear: 'Xoá',
+    expand: 'Mở rộng', collapse: 'Thu gọn',
+    autoclose: 'Tự tắt máy ảo đang chạy', keepbak: 'Giữ bản gốc (.orig)',
+    selecthint: 'chọn máy ảo cần dọn', clean: 'Dọn mục đã chọn', cleann: 'Dọn {n} máy ảo',
+    scanning: 'Đang quét đĩa ảo...', ready: 'Nhấn Quét lại để bắt đầu',
+    copied: 'Đã copy {n} dòng', copyfail: 'Copy thất bại', logempty: 'Log trống',
+    theme: 'Giao diện', themeauto: 'Tự động', themelight: 'Sáng', themedark: 'Tối', language: 'Ngôn ngữ',
+    scanstart: 'Đang quét...', scandone: 'Quét xong: {n} máy ảo · thu hồi {r} GB · trống {f} GB',
+    scanfail: 'Quét lỗi: {m}', runfail: 'Không khởi chạy được: {m}',
+    alldone: 'XONG: {a} GB → {b} GB (giảm {c} GB)', stopped: 'DỪNG: {m}'
+  }
+};
+
+let CFG = { theme: 'auto', lang: 'en' };
+let DATA = null, selected = new Set(), running = false, expanded = false, lines = 0;
+const mq = window.matchMedia('(prefers-color-scheme: dark)');
+
+function t(k, p){
+  let s = (I18N[CFG.lang] && I18N[CFG.lang][k]) || I18N.en[k] || k;
+  if (p) for (const key in p) s = s.replace('{' + key + '}', p[key]);
+  return s;
+}
+function applyI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent = t(el.dataset.i18n); });
+  document.documentElement.lang = CFG.lang;
+  const c = document.getElementById('cnt');
+  if (c) c.textContent = t('lines', { n: lines });
+  updateBtn();
+}
+function effectiveTheme(){
+  return CFG.theme === 'auto' ? (mq.matches ? 'dark' : 'light') : CFG.theme;
+}
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme', effectiveTheme());
+  document.querySelectorAll('#segTheme button').forEach(b=>
+    b.classList.toggle('on', b.dataset.v === CFG.theme));
+  document.querySelectorAll('#segLang button').forEach(b=>
+    b.classList.toggle('on', b.dataset.v === CFG.lang));
+}
+mq.addEventListener('change', ()=>{ if (CFG.theme === 'auto') applyTheme(); });
+
+function toggleSettings(e){
+  e.stopPropagation();
+  document.getElementById('pop').classList.toggle('open');
+}
+document.addEventListener('click', e=>{
+  const p = document.getElementById('pop');
+  if (p.classList.contains('open') && !p.contains(e.target) && !e.target.closest('#btnSet'))
+    p.classList.remove('open');
+});
+document.getElementById('segTheme').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if (!b) return;
+  CFG.theme = b.dataset.v; applyTheme(); persist();
+});
+document.getElementById('segLang').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if (!b) return;
+  CFG.lang = b.dataset.v; applyTheme(); applyI18n();
+  if (DATA) render(); else updateBtn();
+  persist();
+});
+async function persist(){
+  try{ await window.pywebview.api.set_config({ theme: CFG.theme, lang: CFG.lang }); }catch(e){}
+}
+
+function log(txt, lvl){
+  const box = document.getElementById('log');
+  const stick = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
+  const d = document.createElement('div');
+  d.className = lvl || 'info';
+  d.textContent = txt;
+  box.appendChild(d);
+  lines++;
+  document.getElementById('cnt').textContent = t('lines', { n: lines });
+  if (stick) box.scrollTop = box.scrollHeight;
+}
+function clearLog(){
+  document.getElementById('log').innerHTML = '';
+  lines = 0;
+  document.getElementById('cnt').textContent = t('lines', { n: 0 });
+}
+async function copyLog(){
+  const txt = [...document.querySelectorAll('#log div')].map(d => d.textContent).join('\n');
+  if (!txt){ toast(t('logempty')); return; }
+  let ok = false;
+  try{ const r = await window.pywebview.api.copy_text(txt); ok = r && r.ok; }catch(e){ ok = false; }
+  if (!ok){
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      ok = document.execCommand('copy'); document.body.removeChild(ta);
+    }catch(e){ ok = false; }
+  }
+  toast(ok ? t('copied', { n: txt.split('\n').length }) : t('copyfail'));
+}
+function toast(m){
+  const el = document.getElementById('toast');
+  el.textContent = m; el.classList.add('show');
+  clearTimeout(el._h); el._h = setTimeout(()=>el.classList.remove('show'), 1700);
+}
+function setBar(p){ document.querySelector('#bar > i').style.width = Math.max(0, Math.min(100, p)) + '%'; }
+function fmt(n){ return (Math.round(n*100)/100).toFixed(2); }
+
+function toggleLog(){
+  expanded = !expanded;
+  document.body.style.setProperty('--logh',
+    expanded ? Math.max(320, window.innerHeight - 360) + 'px' : '232px');
+  document.getElementById('btnExp').textContent = t(expanded ? 'collapse' : 'expand');
+}
+(function grip(){
+  const g = document.getElementById('grip');
+  let drag = false, y0 = 0, h0 = 0;
+  g.addEventListener('mousedown', e=>{
+    drag = true; y0 = e.clientY;
+    h0 = document.getElementById('log').getBoundingClientRect().height;
+    document.body.style.cursor = 'ns-resize'; e.preventDefault();
+  });
+  window.addEventListener('mousemove', e=>{
+    if (!drag) return;
+    const h = Math.max(80, Math.min(window.innerHeight - 300, h0 - (e.clientY - y0)));
+    document.body.style.setProperty('--logh', h + 'px');
+    expanded = h > 300;
+    document.getElementById('btnExp').textContent = t(expanded ? 'collapse' : 'expand');
+  });
+  window.addEventListener('mouseup', ()=>{
+    if (drag){ drag = false; document.body.style.cursor = ''; }
+  });
+})();
+
+async function scan(){
+  if (running) return;
+  document.getElementById('btnScan').disabled = true;
+  document.getElementById('tb').innerHTML =
+    '<tr><td colspan="6"><div class="empty"><span class="spin"></span>' +
+    t('scanning') + '</div></td></tr>';
+  log(t('scanstart'), 'sys');
+  const t0 = performance.now();
+  try{
+    const r = await window.pywebview.api.scan();
+    if (!r.ok) throw new Error(r.error || '?');
+    DATA = r;
+    document.getElementById('path').textContent = r.root;
+    render();
+    const sum = r.instances.reduce((a, b)=>a + b.reclaim, 0);
+    log(t('scandone', { n: r.instances.length, r: fmt(sum), f: fmt(r.free) }) +
+        '  (' + Math.round(performance.now() - t0) + ' ms)', 'ok');
+  }catch(e){
+    document.getElementById('tb').innerHTML =
+      '<tr><td colspan="6"><div class="empty red">' + t('scanfail', { m: e.message }) + '</div></td></tr>';
+    log(t('scanfail', { m: e.message }), 'err');
+  }
+  document.getElementById('btnScan').disabled = false;
+}
+
+function render(){
+  const tb = document.getElementById('tb');
+  selected.clear();
+  let tot = 0, rec = 0, aft = 0;
+  tb.innerHTML = '';
+  DATA.instances.forEach(it=>{
+    tot += it.total; rec += it.reclaim; aft += it.after;
+    const tr = document.createElement('tr');
+    const files = it.files.map(f => {
+      const warn = (f.clean === false) ? ' !' : '';
+      return f.name + ' ' + fmt(f.size) + 'G' + (f.reclaim ? ' → ' + fmt(f.after) + 'G' : '') + warn;
+    }).join('  ·  ');
+    let chip;
+    if (it.running) chip = '<span class="chip on">' + t('running') + '</span>';
+    else if (!it.clean) chip = '<span class="chip bad">' + t('dirty') + '</span>';
+    else chip = '<span class="chip">' + t('off') + '</span>';
+    tr.innerHTML =
+      '<td><input type="checkbox" ' + (it.running ? 'disabled' : '') + '></td>' +
+      '<td><div class="nm"><span class="idx mono">#' + it.index + '</span>' + it.name + '</div>' +
+        '<div class="files mono">' + files + '</div></td>' +
+      '<td>' + chip + '</td>' +
+      '<td class="num mono big">' + fmt(it.total) + ' G</td>' +
+      '<td class="num mono big grn">' + (it.reclaim > 0 ? '-' + fmt(it.reclaim) + ' G' : '—') + '</td>' +
+      '<td class="num mono big mut">' + fmt(it.after) + ' G</td>';
+    const cb = tr.querySelector('input');
+    cb.addEventListener('change', ()=>{
+      if (cb.checked) selected.add(it.index); else selected.delete(it.index);
+      tr.classList.toggle('sel', cb.checked);
+      updateBtn();
+    });
+    tb.appendChild(tr);
+  });
+  document.getElementById('sTot').innerHTML = fmt(tot) + '<small>GB</small>';
+  document.getElementById('sRec').innerHTML = fmt(rec) + '<small>GB</small>';
+  document.getElementById('sAft').innerHTML = fmt(aft) + '<small>GB</small>';
+  document.getElementById('sFree').innerHTML = fmt(DATA.free) + '<small>GB</small>';
+  updateBtn();
+}
+
+function toggleAll(el){
+  document.querySelectorAll('#tb input[type=checkbox]').forEach(cb=>{
+    if (cb.disabled) return;
+    cb.checked = el.checked;
+    cb.dispatchEvent(new Event('change'));
+  });
+}
+function updateBtn(){
+  const b = document.getElementById('btnGo');
+  if (!b) return;
+  const n = selected.size;
+  b.disabled = running || n === 0;
+  b.textContent = n ? t('cleann', { n }) : t('clean');
+  document.getElementById('hint').textContent = n ? '' : t('selecthint');
+}
+
+async function go(){
+  if (running || !selected.size) return;
+  const list = [...selected];
+  running = true;
+  updateBtn();
+  document.getElementById('btnScan').disabled = true;
+  setBar(0);
+  try{
+    const r = await window.pywebview.api.compact(list,
+      document.getElementById('quitRun').checked,
+      document.getElementById('keepBak').checked);
+    if (!r.ok) throw new Error(r.error || '?');
+  }catch(e){
+    log(t('runfail', { m: e.message }), 'err');
+    running = false; updateBtn();
+    document.getElementById('btnScan').disabled = false;
+  }
+}
+
+window.__evt = function(e){
+  if (e.type === 'log'){ log(e.text, e.level); }
+  else if (e.type === 'progress'){ setBar(e.pct); }
+  else if (e.type === 'phase'){ document.getElementById('phase').textContent = '· ' + e.name; }
+  else if (e.type === 'done'){
+    running = false;
+    setBar(100);
+    document.getElementById('phase').textContent = '';
+    if (e.ok) log(t('alldone', { a: fmt(e.old), b: fmt(e.new), c: fmt(e.saved) }), 'ok');
+    else log(t('stopped', { m: e.error }), 'err');
+    document.getElementById('btnScan').disabled = false;
+    updateBtn();
+    setTimeout(scan, 700);
+  }
+};
+
+async function boot(){
+  try{
+    const c = await window.pywebview.api.get_config();
+    if (c){ CFG.theme = c.theme || 'auto'; CFG.lang = c.lang || 'en'; }
+  }catch(e){}
+  applyTheme();
+  applyI18n();
+  scan();
+}
+if (window.pywebview && window.pywebview.api) boot();
+else window.addEventListener('pywebviewready', boot);
+</script>
+</body>
+</html>

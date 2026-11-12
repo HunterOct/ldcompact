@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# user config (theme / language)
+config.json
+
+# virtual disk artefacts
+*.vmdk
+*.vmdk.new
+*.vmdk.orig
+
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
